@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Stroop Color Test </title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --border: #cbd5e1;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: var(--surface);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 2rem;
+            color: var(--text);
+        }
+
+        h2 {
+            color: #475569;
+            font-size: 1.5rem;
+        }
+
+        p.instructions {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            font-size: 1.05rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Toggle */
+        
+        .toggle-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: #f1f5f9;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .toggle-label {
+            flex: 1;
+            padding: 0.75rem;
+            background: transparent;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .toggle-label:has(input:checked) {
+            background: var(--surface);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .toggle-label input {
+            display: none;
+        }
+
+        /* Stroop Test */
+        #game-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .music-banner {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #475569;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        #word-display {
+            font-size: 4.5rem;
+            font-weight: 900;
+            margin: 2rem 0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            transition: color 0.1s;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+
+        button:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .color-btn {
+            background-color: #f1f5f9;
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .color-btn:hover {
+            background-color: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        #penalty-msg {
+            color: var(--danger);
+            font-weight: bold;
+            font-size: 1.1rem;
+            height: 1.5rem;
+            margin-top: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .show-penalty {
+            opacity: 1 !important;
+        }
+
+        /* Break Screen */
+        #break-timer {
+            font-size: 4rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin: 2rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Results Screen */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .results-table th, .results-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 1.1rem;
+        }
+
+        .results-table th {
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .results-table tr:last-child td {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        .diff-positive { color: var(--danger); }
+        .diff-negative { color: var(--success); }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        @media (max-width: 480px) {
+            .btn-grid { grid-template-columns: repeat(2, 1fr); }
+            #word-display { font-size: 3rem; }
+            .toggle-group { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<audio id="audio-nonlyric" loop src="nonlyric.mp3"></audio>
+<audio id="audio-lyric" loop src="lyric.mp3"></audio>
+
+<div class="container" id="start-screen">
+    <h1>Stroop Test: Non-Lyrical vs. Lyrical Music </h1>
+    <p class="instructions">
+        You will take the Stroop Test twice. Identify the <strong>ink color</strong> of the word, not the text itself. For example, <span style="color: #ef4444;"><strong>Blue</strong></span> would be Red. <br><br>
+
+    </p>
+    
+    <div class="toggle-group">
+        <label class="toggle-label">
+            <input type="radio" name="music-start" value="nonlyric" checked>
+            Start Non-Lyrical
+        </label>
+        <label class="toggle-label">
+            <input type="radio" name="music-start" value="lyric">
+            Start Lyrical
+        </label>
+    </div>
+
+    <button onclick="startPhaseOne()" style="padding: 1.2rem; font-size: 1.1rem;">Begin Test 1</button>
+</div>
+
+<div class="container hidden" id="game-screen">
+    <div class="music-banner">
+        Now Playing: <span id="current-music-label">...</span>
+    </div>
+
+    <div class="stats">
+        <div>Phase <span id="phase-display">1</span>/2</div>
+        <div>Score: <span id="score">0</span> / 20</div>
+        <div>Time: <span id="timer">0.0</span>s</div>
+    </div>
+    
+    <div id="word-display">WORD</div>
+    
+    <div class="btn-grid" id="button-container">
+        </div>
+    
+    <div id="penalty-msg">+4 Seconds Penalty!</div>
+</div>
+
+<div class="container hidden" id="break-screen">
+    <h2>Phase 1 Complete</h2>
+    <p class="instructions">Please rest for 2 minutes. The second test will begin shortly with the opposite music style.</p>
+    
+    <div id="break-timer">02:00</div>
+    
+    <button id="btn-phase-two" disabled onclick="startPhaseTwo()" style="padding: 1.2rem; font-size: 1.1rem;">
+        Waiting for timer...
+    </button>
+</div>
+
+<div class="container hidden" id="end-screen">
+    <h1>Final Results</h1>
+    <p class="instructions" style="margin-bottom: 0;">Here is how you performed under both conditions.</p>
+    
+    <table class="results-table">
+        <tr>
+            <th>Non-Lyrical Time</th>
+            <td id="res-nonlyric">0.0s</td>
+        </tr>
+        <tr>
+            <th>Lyrical Time</th>
+            <td id="res-lyric">0.0s</td>
+        </tr>
+        <tr>
+            <th>Difference <br><span style="font-size: 0.8rem; font-weight: normal;">(Non-Lyrical - Lyrical)</span></th>
+            <td id="res-diff">0.0s</td>
+        </tr>
+    </table>
+
+    <button onclick="resetApp()" style="padding: 1.2rem; font-size: 1.1rem;">Restart Study</button>
+</div>
+
+<script>
+    // System Config
+    const targetScore = 20;
+    const breakDurationSeconds = 120;
+    const colors = [
+        { name: 'Red', hex: '#ef4444' },
+        { name: 'Blue', hex: '#3b82f6' },
+        { name: 'Green', hex: '#22c55e' },
+        { name: 'Yellow', hex: '#eab308' },
+        { name: 'Purple', hex: '#a855f7' },
+        { name: 'Orange', hex: '#f97316' }
+    ];
+
+    // State Variables
+    let currentPhase = 1;
+    let firstMusicType = '';
+    let currentMusicType = '';
+    let timeNonLyric = 0;
+    let timeLyric = 0;
+    
+    // Game Variables
+    let score = 0;
+    let startTime;
+    let timerInterval;
+    let breakInterval;
+    let penaltySeconds = 0;
+    let currentInkColor = '';
+
+    // DOM Elements
+    const screens = {
+        start: document.getElementById('start-screen'),
+        game: document.getElementById('game-screen'),
+        break: document.getElementById('break-screen'),
+        end: document.getElementById('end-screen')
+    };
+
+    function showScreen(screenName) {
+        Object.values(screens).forEach(s => s.classList.add('hidden'));
+        screens[screenName].classList.remove('hidden');
+    }
+
+    // Initialize answer buttons
+    function initButtons() {
+        const container = document.getElementById('button-container');
+        container.innerHTML = '';
+        colors.forEach(color => {
+            const btn = document.createElement('button');
+            btn.className = 'color-btn';
+            btn.innerText = color.name;
+            btn.onclick = () => checkAnswer(color.name);
+            container.appendChild(btn);
+        });
+    }
+
+    // Audio Control
+    function playMusic(type) {
+        stopMusic();
+        const audioEl = document.getElementById(`audio-${type}`);
+        // Catch promise in case files aren't provided so the app doesn't crash
+        audioEl.play().catch(e => console.log("Audio file missing or autoplay blocked. Ignoring."));
+        document.getElementById('current-music-label').innerText = type === 'lyric' ? 'Lyrical Music' : 'Non-Lyrical Music';
+    }
+
+    function stopMusic() {
+        document.getElementById('audio-lyric').pause();
+        document.getElementById('audio-nonlyric').pause();
+    }
+
+    // Flow Control
+    function startPhaseOne() {
+        // Determine selected music
+        const radio = document.querySelector('input[name="music-start"]:checked');
+        firstMusicType = radio.value;
+        currentMusicType = firstMusicType;
+        currentPhase = 1;
+        
+        setupGame();
+    }
+
+    function startPhaseTwo() {
+        // Swap music type
+        currentMusicType = firstMusicType === 'lyric' ? 'nonlyric' : 'lyric';
+        currentPhase = 2;
+        
+        setupGame();
+    }
+
+    function setupGame() {
+        score = 0;
+        penaltySeconds = 0;
+        document.getElementById('score').innerText = score;
+        document.getElementById('phase-display').innerText = currentPhase;
+        
+        showScreen('game');
+        initButtons();
+        playMusic(currentMusicType);
+        
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 100);
+        nextQuestion();
+    }
+
+    function updateTimer() {
+        const elapsed = (Date.now() - startTime) / 1000 + penaltySeconds;
+        document.getElementById('timer').innerText = elapsed.toFixed(1);
+    }
+
+    function nextQuestion() {
+        const textIdx = Math.floor(Math.random() * colors.length);
+        let inkIdx = Math.floor(Math.random() * colors.length);
+        
+        // 80% chance of mismatch
+        if (Math.random() < 0.8 && textIdx === inkIdx) {
+            inkIdx = (inkIdx + 1) % colors.length;
+        }
+
+        currentInkColor = colors[inkIdx].name;
+        
+        const display = document.getElementById('word-display');
+        display.innerText = colors[textIdx].name;
+        display.style.color = colors[inkIdx].hex;
+    }
+
+    function checkAnswer(selectedColor) {
+        if (selectedColor === currentInkColor) {
+            score++;
+            document.getElementById('score').innerText = score;
+            if (score >= targetScore) {
+                endPhase();
+            } else {
+                nextQuestion();
+            }
+        } else {
+            penaltySeconds += 4;
+            updateTimer(); 
+            
+            const display = document.getElementById('word-display');
+            const msg = document.getElementById('penalty-msg');
+            
+            display.classList.add('shake');
+            msg.classList.add('show-penalty');
+            
+            setTimeout(() => {
+                display.classList.remove('shake');
+                msg.classList.remove('show-penalty');
+            }, 500);
+
+            nextQuestion();
+        }
+    }
+
+    function endPhase() {
+        clearInterval(timerInterval);
+        stopMusic();
+        
+        const finalTime = (Date.now() - startTime) / 1000 + penaltySeconds;
+        
+        if (currentMusicType === 'lyric') timeLyric = finalTime;
+        else timeNonLyric = finalTime;
+
+        if (currentPhase === 1) {
+            startBreak();
+        } else {
+            showResults();
+        }
+    }
+
+    // Break Logic
+    function startBreak() {
+        showScreen('break');
+        let timeLeft = breakDurationSeconds;
+        const timerDisplay = document.getElementById('break-timer');
+        const nextBtn = document.getElementById('btn-phase-two');
+        
+        nextBtn.disabled = true;
+        nextBtn.innerText = 'Resting...';
+
+        function updateBreakUI() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            timerDisplay.innerText = `${m}:${s}`;
+        }
+
+        updateBreakUI();
+
+        breakInterval = setInterval(() => {
+            timeLeft--;
+            updateBreakUI();
+            
+            if (timeLeft <= 0) {
+                clearInterval(breakInterval);
+                nextBtn.disabled = false;
+                nextBtn.innerText = 'Begin Test 2';
+            }
+        }, 1000);
+    }
+
+    // Results Logic
+    function showResults() {
+        showScreen('end');
+        
+        const diff = timeNonLyric - timeLyric;
+        const diffAbs = Math.abs(diff).toFixed(1);
+        
+        document.getElementById('res-nonlyric').innerText = timeNonLyric.toFixed(1) + 's';
+        document.getElementById('res-lyric').innerText = timeLyric.toFixed(1) + 's';
+        
+        const diffEl = document.getElementById('res-diff');
+        
+        if (diff > 0) {
+            diffEl.innerText = `+${diffAbs}s`;
+            diffEl.className = 'diff-positive'; // Red
+        } else if (diff < 0) {
+            diffEl.innerText = `-${diffAbs}s`;
+            diffEl.className = 'diff-negative'; // Green
+        } else {
+            diffEl.innerText = '0.0s';
+            diffEl.className = '';
+        }
+    }
+
+    function resetApp() {
+        showScreen('start');
+        stopMusic();
+    }
+</script>
+</body>
+</html>
