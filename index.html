@@ -249,12 +249,165 @@
             #word-display { font-size: 3rem; }
             .toggle-group { flex-direction: column; }
         }
+
+        /* Login Screen */
+        .login-container {
+            max-width: 450px;
+            margin: auto;
+        }
+
+        .csv-upload-section {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .csv-upload-section h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            color: var(--text);
+        }
+
+        .csv-upload-section p {
+            margin: 0 0 1rem 0;
+            color: #64748b;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        #csv-file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            transition: background-color 0.2s;
+            font-size: 1rem;
+        }
+
+        .file-input-label:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .file-name {
+            margin-top: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group input {
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        #login-error {
+            color: var(--danger);
+            font-weight: bold;
+            height: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.95rem;
+        }
+
+        #login-error.show-error {
+            opacity: 1;
+        }
+
+        .csv-status {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .csv-status.loaded {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .csv-status.not-loaded {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
     </style>
 </head>
 <body>
 
 <audio id="audio-nonlyric" loop src="nonlyric.mp3"></audio>
 <audio id="audio-lyric" loop src="lyric.mp3"></audio>
+
+<div class="container hidden login-container" id="login-screen">
+    <h1>Stroop Test: Non-Lyrical vs. Lyrical Music</h1>
+    <p class="instructions">Please enter your access code to begin.</p>
+
+    <div class="csv-upload-section">
+        <h3>📄 Load Access Codes</h3>
+        <p>Upload a CSV file containing valid access codes. The CSV should have a "code" column with the access codes.</p>
+        <div class="file-input-wrapper">
+            <label for="csv-file-input" class="file-input-label">
+                Choose CSV File
+            </label>
+            <input type="file" id="csv-file-input" accept=".csv" onchange="handleCSVUpload(event)">
+            <div class="file-name" id="file-name"></div>
+        </div>
+    </div>
+
+    <div class="csv-status not-loaded" id="csv-status">
+        ⚠️ No CSV file loaded
+    </div>
+
+    <div class="login-form">
+        <div class="form-group">
+            <label for="access-code">Access Code:</label>
+            <input type="text" id="access-code" placeholder="Enter your code" onkeypress="handleCodeKeyPress(event)">
+        </div>
+        <div id="login-error"></div>
+        <button onclick="validateLogin()" style="padding: 1.2rem; font-size: 1.1rem;">Enter</button>
+    </div>
+</div>
 
 <div class="container" id="start-screen">
     <h1>Stroop Test: Non-Lyrical vs. Lyrical Music </h1>
@@ -357,13 +510,181 @@
     let penaltySeconds = 0;
     let currentInkColor = '';
 
+    // Login Variables
+    let validAccessCodes = [];
+    let isLoggedIn = false;
+    let userMusicStart = ''; // Track assigned music type for logged-in user
+    let codeToMusicMap = {}; // Map codes to their assigned music type
+
     // DOM Elements
     const screens = {
+        login: document.getElementById('login-screen'),
         start: document.getElementById('start-screen'),
         game: document.getElementById('game-screen'),
         break: document.getElementById('break-screen'),
         end: document.getElementById('end-screen')
     };
+
+    function showScreen(screenName) {
+        Object.values(screens).forEach(s => s.classList.add('hidden'));
+        screens[screenName].classList.remove('hidden');
+    }
+
+    // Login & CSV Handling
+    function handleCSVUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const csv = e.target.result;
+                parseCSV(csv);
+                document.getElementById('file-name').innerText = `✓ Loaded: ${file.name}`;
+                updateCSVStatus(true);
+            } catch (error) {
+                console.error('Error parsing CSV:', error);
+                showLoginError('Error loading CSV file. Please check the format.');
+                document.getElementById('file-name').innerText = '';
+                updateCSVStatus(false);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function parseCSV(csvText) {
+        const lines = csvText.trim().split('\n');
+        if (lines.length === 0) throw new Error('Empty CSV file');
+        
+        const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const codeIndex = header.indexOf('code');
+        const musicIndex = header.indexOf('music_start');
+        
+        if (codeIndex === -1) {
+            throw new Error('CSV must have a "code" column');
+        }
+
+        validAccessCodes = [];
+        codeToMusicMap = {};
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            if (values[codeIndex]) {
+                const code = values[codeIndex].toUpperCase();
+                validAccessCodes.push(code);
+                
+                // Store music type if available
+                if (musicIndex !== -1 && values[musicIndex]) {
+                    codeToMusicMap[code] = values[musicIndex].toLowerCase();
+                }
+            }
+        }
+
+        if (validAccessCodes.length === 0) {
+            throw new Error('No valid codes found in CSV');
+        }
+    }
+
+    function updateCSVStatus(loaded) {
+        const status = document.getElementById('csv-status');
+        if (loaded) {
+            status.classList.remove('not-loaded');
+            status.classList.add('loaded');
+            status.innerText = `✓ CSV loaded with ${validAccessCodes.length} access code(s)`;
+        } else {
+            status.classList.add('not-loaded');
+            status.classList.remove('loaded');
+            status.innerText = '⚠️ No CSV file loaded';
+        }
+    }
+
+    function validateLogin() {
+        const code = document.getElementById('access-code').value.trim().toUpperCase();
+        const errorEl = document.getElementById('login-error');
+
+        if (validAccessCodes.length === 0) {
+            showLoginError('Please load a CSV file with access codes first.');
+            return;
+        }
+
+        if (!code) {
+            showLoginError('Please enter an access code.');
+            return;
+        }
+
+        if (validAccessCodes.includes(code)) {
+            isLoggedIn = true;
+            errorEl.classList.remove('show-error');
+            document.getElementById('access-code').value = '';
+            
+            // Get assigned music type and set toggle
+            userMusicStart = codeToMusicMap[code] || 'nonlyric'; // Default to nonlyric
+            setMusicStartToggle(userMusicStart);
+            lockMusicStartToggle();
+            
+            showScreen('start');
+        } else {
+            showLoginError('Invalid access code. Please try again.');
+            document.getElementById('access-code').value = '';
+            document.getElementById('access-code').focus();
+        }
+    }
+
+    function setMusicStartToggle(musicType) {
+        const radio = document.querySelector(`input[name="music-start"][value="${musicType}"]`);
+        if (radio) {
+            radio.checked = true;
+        }
+    }
+
+    function lockMusicStartToggle() {
+        const radios = document.querySelectorAll('input[name="music-start"]');
+        radios.forEach(radio => {
+            radio.disabled = true;
+        });
+        
+        const labels = document.querySelectorAll('.toggle-label');
+        labels.forEach(label => {
+            label.style.opacity = '0.6';
+            label.style.cursor = 'not-allowed';
+        });
+    }
+
+    function handleCodeKeyPress(event) {
+        if (event.key === 'Enter') {
+            validateLogin();
+        }
+    }
+
+    function showLoginError(message) {
+        const errorEl = document.getElementById('login-error');
+        errorEl.innerText = message;
+        errorEl.classList.add('show-error');
+    }
+
+    // Initialize App
+    function initApp() {
+        showScreen('login');
+        document.getElementById('access-code').focus();
+        autoLoadCSV();
+    }
+
+    function autoLoadCSV() {
+        // Try to automatically load the CSV file
+        fetch('access_codes.csv')
+            .then(response => {
+                if (!response.ok) throw new Error('CSV file not found');
+                return response.text();
+            })
+            .then(csv => {
+                parseCSV(csv);
+                document.getElementById('file-name').innerText = `✓ Auto-loaded: access_codes.csv`;
+                updateCSVStatus(true);
+            })
+            .catch(error => {
+                console.log('Auto-load failed (manual upload available):', error);
+                updateCSVStatus(false);
+            });
+    }
 
     function showScreen(screenName) {
         Object.values(screens).forEach(s => s.classList.add('hidden'));
@@ -551,9 +872,31 @@
     }
 
     function resetApp() {
-        showScreen('start');
+        showScreen('login');
         stopMusic();
+        document.getElementById('access-code').value = '';
+        document.getElementById('access-code').focus();
+        
+        // Unlock the toggle for next user
+        const radios = document.querySelectorAll('input[name="music-start"]');
+        radios.forEach(radio => {
+            radio.disabled = false;
+        });
+        
+        const labels = document.querySelectorAll('.toggle-label');
+        labels.forEach(label => {
+            label.style.opacity = '1';
+            label.style.cursor = 'pointer';
+        });
+        
+        isLoggedIn = false;
+        userMusicStart = '';
     }
+
+    // Start app on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        initApp();
+    });
 </script>
 </body>
 </html>
