@@ -304,13 +304,6 @@
             background-color: var(--primary-hover);
         }
 
-        .file-name {
-            margin-top: 0.75rem;
-            font-size: 0.95rem;
-            color: var(--success);
-            font-weight: 600;
-        }
-
         .login-form {
             display: flex;
             flex-direction: column;
@@ -383,20 +376,8 @@
     <h1>Stroop Test: Non-Lyrical vs. Lyrical Music</h1>
     <p class="instructions">Please enter your access code to begin.</p>
 
-    <div class="csv-upload-section">
-        <h3>📄 Load Access Codes</h3>
-        <p>Upload a CSV file containing valid access codes. The CSV should have a "code" column with the access codes.</p>
-        <div class="file-input-wrapper">
-            <label for="csv-file-input" class="file-input-label">
-                Choose CSV File
-            </label>
-            <input type="file" id="csv-file-input" accept=".csv" onchange="handleCSVUpload(event)">
-            <div class="file-name" id="file-name"></div>
-        </div>
-    </div>
-
-    <div class="csv-status not-loaded" id="csv-status">
-        ⚠️ No CSV file loaded
+    <div class="csv-status" id="csv-status">
+        ⚠️ Loading access codes...
     </div>
 
     <div class="login-form">
@@ -531,28 +512,39 @@
     }
 
     // Login & CSV Handling
-    function handleCSVUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    function parseCSV(csvText) {
+        const lines = csvText.trim().split('\n');
+        if (lines.length === 0) throw new Error('Empty CSV file');
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const csv = e.target.result;
-                parseCSV(csv);
-                document.getElementById('file-name').innerText = `✓ Loaded: ${file.name}`;
-                updateCSVStatus(true);
-            } catch (error) {
-                console.error('Error parsing CSV:', error);
-                showLoginError('Error loading CSV file. Please check the format.');
-                document.getElementById('file-name').innerText = '';
-                updateCSVStatus(false);
+        const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const codeIndex = header.indexOf('code');
+        const musicIndex = header.indexOf('music_start');
+
+        if (codeIndex === -1) {
+            throw new Error('CSV must have a "code" column');
+        }
+
+        validAccessCodes = [];
+        codeToMusicMap = {};
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            if (values[codeIndex]) {
+                const code = values[codeIndex].toUpperCase();
+                validAccessCodes.push(code);
+
+                // Store music type if available
+                if (musicIndex !== -1 && values[musicIndex]) {
+                    codeToMusicMap[code] = values[musicIndex].toLowerCase();
+                }
             }
-        };
-        reader.readAsText(file);
+        }
+
+        if (validAccessCodes.length === 0) {
+            throw new Error('No valid codes found in CSV');
+        }
     }
 
-    function parseCSV(csvText) {
+    function updateCSVStatus(loaded) {
         const lines = csvText.trim().split('\n');
         if (lines.length === 0) throw new Error('Empty CSV file');
         
@@ -677,11 +669,10 @@
             })
             .then(csv => {
                 parseCSV(csv);
-                document.getElementById('file-name').innerText = `✓ Auto-loaded: access_codes.csv`;
                 updateCSVStatus(true);
             })
             .catch(error => {
-                console.log('Auto-load failed (manual upload available):', error);
+                console.error('Error loading CSV:', error);
                 updateCSVStatus(false);
             });
     }
