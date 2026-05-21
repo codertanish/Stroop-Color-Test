@@ -444,6 +444,7 @@
 <div class="container hidden" id="end-screen">
     <h1>Final Results</h1>
     <p class="instructions" style="margin-bottom: 0;">Here is how you performed under both conditions.</p>
+    <div id="submission-status" style="margin: 1rem 0; font-weight: 700;"></div>
     
     <table class="results-table">
         <tr>
@@ -482,6 +483,8 @@
     let currentMusicType = '';
     let timeNonLyric = 0;
     let timeLyric = 0;
+    let currentAccessCode = '';
+    const googleSheetsEndpoint = 'https://script.google.com/macros/s/AKfycbyzYA7OO1Tuf2ziIYf0MNIOorpup13g8ikBXNrBgslR296zZeaQBiheTVGRR6igLI4AZA/exec';
     
     // Game Variables
     let score = 0;
@@ -545,38 +548,6 @@
     }
 
     function updateCSVStatus(loaded) {
-        const lines = csvText.trim().split('\n');
-        if (lines.length === 0) throw new Error('Empty CSV file');
-        
-        const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-        const codeIndex = header.indexOf('code');
-        const musicIndex = header.indexOf('music_start');
-        
-        if (codeIndex === -1) {
-            throw new Error('CSV must have a "code" column');
-        }
-
-        validAccessCodes = [];
-        codeToMusicMap = {};
-        for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
-            if (values[codeIndex]) {
-                const code = values[codeIndex].toUpperCase();
-                validAccessCodes.push(code);
-                
-                // Store music type if available
-                if (musicIndex !== -1 && values[musicIndex]) {
-                    codeToMusicMap[code] = values[musicIndex].toLowerCase();
-                }
-            }
-        }
-
-        if (validAccessCodes.length === 0) {
-            throw new Error('No valid codes found in CSV');
-        }
-    }
-
-    function updateCSVStatus(loaded) {
         const status = document.getElementById('csv-status');
         if (loaded) {
             status.classList.remove('not-loaded');
@@ -605,6 +576,7 @@
 
         if (validAccessCodes.includes(code)) {
             isLoggedIn = true;
+            currentAccessCode = code;
             errorEl.classList.remove('show-error');
             document.getElementById('access-code').value = '';
             
@@ -860,6 +832,47 @@
             diffEl.innerText = '0.0s';
             diffEl.className = '';
         }
+
+        submitResults();
+    }
+
+    function setSubmissionStatus(message, isError = false) {
+        const statusEl = document.getElementById('submission-status');
+        if (!statusEl) return;
+        statusEl.innerText = message;
+        statusEl.style.color = isError ? '#ef4444' : '#22c55e';
+    }
+
+    function submitResults() {
+        if (!googleSheetsEndpoint || googleSheetsEndpoint.includes('REPLACE_WITH_YOUR_WEB_APP_ID')) {
+            setSubmissionStatus('Google Sheets submission is not configured. Please update the endpoint URL.', true);
+            console.warn('Google Sheets endpoint not configured.');
+            return;
+        }
+
+        const payload = new URLSearchParams({
+            access_code: currentAccessCode,
+            assigned_music_start: firstMusicType,
+            nonlyric_time: timeNonLyric.toFixed(1),
+            lyric_time: timeLyric.toFixed(1),
+            difference: (timeNonLyric - timeLyric).toFixed(1),
+            timestamp: new Date().toISOString()
+        });
+
+        setSubmissionStatus('Submitting results to Google Sheets...');
+
+        fetch(googleSheetsEndpoint, {
+            method: 'POST',
+            body: payload,
+            mode: 'no-cors'
+        })
+        .then(() => {
+            setSubmissionStatus('Results submitted to Google Sheets.');
+        })
+        .catch(error => {
+            console.error('Google Sheets submission error:', error);
+            setSubmissionStatus(`Unable to submit results to Google Sheets: ${error.message}`, true);
+        });
     }
 
     function resetApp() {
@@ -882,6 +895,7 @@
         
         isLoggedIn = false;
         userMusicStart = '';
+        currentAccessCode = '';
     }
 
     // Start app on page load
