@@ -484,7 +484,7 @@
     let timeNonLyric = 0;
     let timeLyric = 0;
     let currentAccessCode = '';
-    const googleSheetsEndpoint = 'https://script.google.com/macros/s/AKfycbyzYA7OO1Tuf2ziIYf0MNIOorpup13g8ikBXNrBgslR296zZeaQBiheTVGRR6igLI4AZA/exec';
+    const googleSheetsEndpoint = 'https://script.google.com/macros/s/AKfycbzuk7mosjhQlg9KmPrV2ijSUFp-qYPRnk8ZqzGHuObfjamXc0KmFV-PGlzUBdVZ0TxG/exec';
     
     // Game Variables
     let score = 0;
@@ -844,7 +844,7 @@
     }
 
     function submitResults() {
-        if (!googleSheetsEndpoint || googleSheetsEndpoint.includes('REPLACE_WITH_YOUR_WEB_APP_ID')) {
+        if (!googleSheetsEndpoint || !googleSheetsEndpoint.includes('https://script.google.com/macros/s/AKfycbzuk7mosjhQlg9KmPrV2ijSUFp-qYPRnk8ZqzGHuObfjamXc0KmFV-PGlzUBdVZ0TxG/exec')) {
             setSubmissionStatus('Google Sheets submission is not configured. Please update the endpoint URL.', true);
             console.warn('Google Sheets endpoint not configured.');
             return;
@@ -855,9 +855,7 @@
             assigned_music_start: firstMusicType,
             nonlyric_time: timeNonLyric.toFixed(1),
             lyric_time: timeLyric.toFixed(1),
-            difference: (timeNonLyric - timeLyric).toFixed(1),
-            timestamp: new Date().toISOString()
-        });
+            difference: (timeNonLyric - timeLyric).toFixed(1)        });
 
         setSubmissionStatus('Submitting results to Google Sheets...');
 
