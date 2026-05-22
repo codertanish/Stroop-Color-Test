@@ -853,9 +853,9 @@
         const payload = new URLSearchParams({
             access_code: currentAccessCode,
             assigned_music_start: firstMusicType,
-            nonlyric_time: timeNonLyric.toFixed(1),
-            lyric_time: timeLyric.toFixed(1),
-            difference: (timeNonLyric - timeLyric).toFixed(1)        });
+            nonlyric_time: timeNonLyric.toFixed(3),
+            lyric_time: timeLyric.toFixed(3),
+            difference: (timeNonLyric - timeLyric).toFixed(3)        });
 
         setSubmissionStatus('Submitting results to Google Sheets...');
 
